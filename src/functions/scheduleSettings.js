@@ -309,9 +309,9 @@ export const scheduleNotifications = (bot) => {
             timeslots.forEach(slot => {
                 if (settings[day][slot.label]) {
                     const [startHour, startMinute] = slot.time.split(':').map(Number);
-                    schedule.scheduleJob({ hour: startHour, minute: startMinute - 10, dayOfWeek: dayIndex }, () => {
+                    schedule.scheduleJob({ hour: startHour, minute: startMinute - 5, dayOfWeek: dayIndex }, () => {
                         users.forEach(user => {
-                            bot.telegram.sendMessage(user.id, `Напоминание: ${slot.label} начинается через 10 минут.`);
+                            bot.telegram.sendMessage(user.id, `Напоминание: «${slot.label}» начинается через 5 минут.`);
                         });
                     });
                 }

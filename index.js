@@ -23,6 +23,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {getUserInfo} from "./src/utils/getUserInfo.js";
+import './src/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,8 +69,14 @@ const isAdmin = (ctx) => {
     return config.adminIds.includes(userId);
 };
 
+const reloadRegisteredUsers = () => {
+    const usersPath = path.join(__dirname, 'src', 'data', 'users.json');
+    return JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
+};
+
 const isRegistered = (ctx) => {
     const userId = ctx.message ? ctx.message.from.id : ctx.callbackQuery.from.id;
+    const registeredUsers = reloadRegisteredUsers();
     return registeredUsers.includes(userId);
 };
 
@@ -99,13 +106,14 @@ bot.start((ctx) => {
         return;
     }
     const userId = ctx.message.from.id;
+    const userName = ctx.message.from.first_name;
     addUser(userId);
-    ctx.reply('Привет! Я бот-планировщик. Готов к работе!');
+    ctx.reply(`Привет, ${userName}! Для получения списка доступных команд используйте /help.`);
 });
 
 bot.command('help', registrationMiddleware, (ctx) => {
-    const helpMessage = `
-Доступные команды:
+    const adminHelpMessage = `
+Доступные команды для администраторов:
 - /start - Запуск бота
 - /help - Показать это сообщение
 - /send - Отправить сообщение всем пользователям
@@ -123,7 +131,24 @@ bot.command('help', registrationMiddleware, (ctx) => {
 - /list_users - Показать список пользователей
 - /toggle_registration - Открыть/закрыть регистрацию
     `;
-    ctx.reply(helpMessage);
+
+    const userHelpMessage = `
+Доступные команды:
+- /start - Запуск бота
+- /help - Показать это сообщение
+- /schedule_week - Показать расписание на неделю
+- /schedule_today - Показать расписание на сегодня
+- /reminder_create - Установить напоминание
+- /reminder_list - Показать все напоминания
+- /reminder_delete - Удалить напоминание
+- /reminder_calendar - Выбрать дату для напоминания
+    `;
+
+    if (isAdmin(ctx)) {
+        ctx.reply(adminHelpMessage);
+    } else {
+        ctx.reply(userHelpMessage);
+    }
 });
 
 bot.command('send', adminMiddleware, registrationMiddleware, async (ctx) => {

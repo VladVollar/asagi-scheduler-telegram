@@ -17,6 +17,7 @@ const timeslots = [
     { time: '17:20', label: '7 пара (17:20 - 18:40)' },
     { time: '18:50', label: '8 пара (18:50 - 20:10)' }
 ];
+const timeZone = 'Europe/Kiev';
 
 const loadSettings = () => {
     if (fs.existsSync(filePath)) {
@@ -27,7 +28,9 @@ const loadSettings = () => {
 
 const loadUsers = () => {
     if (fs.existsSync(usersFilePath)) {
-        return JSON.parse(fs.readFileSync(usersFilePath, 'utf-8'));
+        const users = JSON.parse(fs.readFileSync(usersFilePath, 'utf-8'));
+        console.log('Users loaded from file:', users); // Add this line for debugging
+        return users;
     }
     return [];
 };
@@ -294,24 +297,35 @@ export const scheduleNotifications = (bot) => {
     const users = loadUsers();
     const settings = loadSettings();
 
-    schedule.scheduleJob({ hour: 7, minute: 0 }, () => {
-        const today = weekdays[new Date().getDay() - 1];
+    // Запланировать ежедневное расписание на 07:00 по Киеву
+    schedule.scheduleJob({ hour: 7, minute: 0, tz: timeZone }, () => {
+        const today = weekdays[new Date().getDay() - 1];  // Получаем текущий день
         if (settings[today]) {
             const dailySchedule = getDailySchedule(today);
             users.forEach(user => {
-                bot.telegram.sendMessage(user.id, dailySchedule);
+                if (user) {
+                    bot.telegram.sendMessage(user, dailySchedule);
+                }
             });
         }
     });
 
+    // Запланировать напоминания за 5 минут до каждой пары
     weekdays.forEach((day, dayIndex) => {
         if (settings[day]) {
             timeslots.forEach(slot => {
                 if (settings[day][slot.label]) {
                     const [startHour, startMinute] = slot.time.split(':').map(Number);
-                    schedule.scheduleJob({ hour: startHour, minute: startMinute - 5, dayOfWeek: dayIndex }, () => {
+                    schedule.scheduleJob({
+                        hour: startHour,
+                        minute: startMinute - 5,
+                        dayOfWeek: dayIndex,
+                        tz: timeZone
+                    }, () => {
                         users.forEach(user => {
-                            bot.telegram.sendMessage(user.id, `Напоминание: «${slot.label}» начинается через 5 минут.`);
+                            if (user) {
+                                bot.telegram.sendMessage(user, `Напоминание: «${slot.label}» начинается через 5 минут.`);
+                            }
                         });
                     });
                 }

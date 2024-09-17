@@ -1,4 +1,6 @@
 {
   "adminIds": [],
+  "studyGroupId": "STUDY_GROUP_ID",
+  "studyChannelId": "STUDY_CHANNEL_ID",
   "registrationOpen": true
 }

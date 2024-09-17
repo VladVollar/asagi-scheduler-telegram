@@ -29,7 +29,6 @@ const loadSettings = () => {
 const loadUsers = () => {
     if (fs.existsSync(usersFilePath)) {
         const users = JSON.parse(fs.readFileSync(usersFilePath, 'utf-8'));
-        console.log('Users loaded from file:', users); // Add this line for debugging
         return users;
     }
     return [];
@@ -50,10 +49,21 @@ const saveReminders = (reminders) => {
     fs.writeFileSync(remindersFilePath, JSON.stringify(reminders, null, 2));
 };
 
-const cancelAllJobs = () => {
-    const allJobs = schedule.scheduledJobs;
-    for (const job in allJobs) {
-        allJobs[job].cancel();
+const cancelJob = (jobName) => {
+    const job = schedule.scheduledJobs[jobName];
+    if (job) {
+        job.cancel();
+    }
+};
+
+const cancelAllJobs = (specificJob = null) => {
+    if (specificJob) {
+        cancelJob(specificJob);
+    } else {
+        const allJobs = schedule.scheduledJobs;
+        for (const job in allJobs) {
+            allJobs[job].cancel();
+        }
     }
 };
 
@@ -219,16 +229,17 @@ export const handleScheduleMessage = (ctx) => {
     if (messageText === '-') {
         if (settings[day] && settings[day][slot]) {
             delete settings[day][slot];
-            ctx.reply(`Пара на ${day}, ${slot} удалена.`);
+            ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> удалена.`, { parse_mode: 'HTML' });
+            cancelJob(`${day}_${slot}`);
         } else {
-            ctx.reply(`Пара на ${day}, ${slot} не найдена.`);
+            ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> не найдена.`, { parse_mode: 'HTML' });
         }
     } else {
         if (!settings[day]) {
             settings[day] = {};
         }
         settings[day][slot] = messageText;
-        ctx.reply(`Пара на ${day}, ${slot} успешно сохранена.`);
+        ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> успешно сохранена.`, { parse_mode: 'HTML' });
     }
 
     saveSettings(settings);
@@ -236,21 +247,20 @@ export const handleScheduleMessage = (ctx) => {
     delete ctx.session.selectedDay;
     delete ctx.session.selectedSlot;
 
-    cancelAllJobs();
     scheduleNotifications(ctx.bot);
 };
 
 export const getFullSchedule = () => {
     const settings = loadSettings();
-    let fullSchedule = 'Полное расписание на неделю:\n\n';
+    let fullSchedule = '<b>Полное расписание на неделю</b>:\n\n';
     let hasSchedule = false;
 
     weekdays.forEach(day => {
         if (settings[day] && Object.keys(settings[day]).length > 0) {
-            fullSchedule += `${day}:\n`;
+            fullSchedule += `<b>${day}</b>:\n`;
             timeslots.forEach(slot => {
                 if (settings[day][slot.label]) {
-                    fullSchedule += `- ${slot.label}: ${settings[day][slot.label]}\n`;
+                    fullSchedule += `– <b>${slot.label}</b>: ${settings[day][slot.label]}\n`;
                 }
             });
             fullSchedule += '\n';
@@ -271,24 +281,24 @@ export const getScheduleForDay = (day) => {
     if (settings[day] && Object.keys(settings[day]).length > 0) {
         timeslots.forEach(slot => {
             if (settings[day][slot.label]) {
-                dailySchedule += `- ${slot.label}: ${settings[day][slot.label]}\n`;
+                dailySchedule += `– <b>${slot.label}</b>: ${settings[day][slot.label]}\n`;
             }
         });
     }
     return dailySchedule.trim();
 };
 
-const getDailySchedule = (day) => {
+const getDailySchedule = (day, includeDayName = false) => {
     const settings = loadSettings();
-    let dailySchedule = `${day}:\n`;
+    let dailySchedule = includeDayName ? `<b>Расписание на сегодня (${day})</b>:\n\n` : `${day}:\n`;
     if (settings[day] && Object.keys(settings[day]).length > 0) {
         timeslots.forEach(slot => {
             if (settings[day][slot.label]) {
-                dailySchedule += `- ${slot.label}: ${settings[day][slot.label]}\n`;
+                dailySchedule += `– <b>${slot.label}</b>: ${settings[day][slot.label]}\n`;
             }
         });
     } else if (settings[day]) {
-        dailySchedule += 'Нет запланированных пар.\n';
+        dailySchedule += 'На сегодня нет запланированных пар.\n';
     }
     return dailySchedule.trim();
 };
@@ -299,12 +309,16 @@ export const scheduleNotifications = (bot) => {
 
     // Запланировать ежедневное расписание на 07:00 по Киеву
     schedule.scheduleJob({ hour: 7, minute: 0, tz: timeZone }, () => {
-        const today = weekdays[new Date().getDay() - 1];  // Получаем текущий день
+        let todayIndex = new Date().getDay(); // Получаем индекс текущего дня недели (0 - воскресенье, 6 - суббота)
+        todayIndex = todayIndex === 0 ? 6 : todayIndex - 1; // Преобразуем 0 (воскресенье) в 6, сдвигаем остальные дни
+        const today = weekdays[todayIndex]; // Получаем название текущего дня недели
+
         if (settings[today]) {
-            const dailySchedule = getDailySchedule(today);
+            const dailySchedule = getDailySchedule(today, true);
+
             users.forEach(user => {
                 if (user) {
-                    bot.telegram.sendMessage(user, dailySchedule);
+                    bot.telegram.sendMessage(user, dailySchedule, { disable_notification: true, parse_mode: 'HTML' });
                 }
             });
         }
@@ -314,17 +328,30 @@ export const scheduleNotifications = (bot) => {
     weekdays.forEach((day, dayIndex) => {
         if (settings[day]) {
             timeslots.forEach(slot => {
-                if (settings[day][slot.label]) {
+                const slotValue = settings[day][slot.label];
+                if (slotValue) {
                     const [startHour, startMinute] = slot.time.split(':').map(Number);
+
+                    // Рассчитываем время напоминания (за 5 минут до начала)
+                    let reminderHour = startHour;
+                    let reminderMinute = startMinute - 5;
+
+                    // Если минуты меньше 0, то уменьшаем час и корректируем минуты
+                    if (reminderMinute < 0) {
+                        reminderHour -= 1;
+                        reminderMinute += 60;
+                    }
+
                     schedule.scheduleJob({
-                        hour: startHour,
-                        minute: startMinute - 5,
-                        dayOfWeek: dayIndex,
+                        hour: reminderHour,
+                        minute: reminderMinute,
+                        dayOfWeek: dayIndex === 6 ? 0 : dayIndex + 1, // Преобразуем наш индекс обратно для расписания (воскресенье - 0)
                         tz: timeZone
                     }, () => {
+
                         users.forEach(user => {
                             if (user) {
-                                bot.telegram.sendMessage(user, `Напоминание: «${slot.label}» начинается через 5 минут.`);
+                                bot.telegram.sendMessage(user, `Напоминание: «<b>${slotValue}</b>» — <b>${slot.label}</b>, начинается через 5 минут.`, {parse_mode: 'HTML'});
                             }
                         });
                     });
@@ -501,7 +528,7 @@ export const handleCalendarSelection = (ctx) => {
     const dayOfWeek = weekdays[selectedDate.getUTCDay() === 0 ? 6 : selectedDate.getUTCDay() - 1];
     ctx.session.selectedDate = selectedDate.toISOString().split('T')[0];
     ctx.answerCbQuery(`Вы выбрали день: ${ctx.session.selectedDate} (${dayOfWeek})`, { show_alert: true });
-    ctx.reply('Введите время в формате ЧЧ:ММ и сообщение для напоминания.');
+    ctx.reply('Введите время в формате <b>ЧЧ:ММ</b> и сообщение для напоминания.', { parse_mode: 'HTML' });
 };
 
 export const handleReminderMessage = (ctx) => {
@@ -537,6 +564,6 @@ export const handleReminderMessage = (ctx) => {
         deleteReminder(reminderId, ctx);
     });
 
-    ctx.reply(`Напоминание установлено на ${ctx.session.selectedDate} в ${time}: ${message}`);
+    ctx.reply(`Напоминание установлено на <b>${ctx.session.selectedDate}</b> в <b>${time}</b>: ${message}`, { parse_mode: 'HTML' });
     delete ctx.session.selectedDate;
 };

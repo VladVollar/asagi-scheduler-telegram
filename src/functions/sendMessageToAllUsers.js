@@ -7,7 +7,7 @@ export const sendMessageToAllUsers = async (message) => {
     const users = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     for (const userId of users) {
         try {
-            await bot.telegram.sendMessage(userId, message);
+            await bot.telegram.sendMessage(userId, message, {parse_mode: 'HTML'});
         } catch (error) {
             console.error(`Failed to send message to ${userId}:`, error);
         }

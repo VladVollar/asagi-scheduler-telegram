@@ -6,6 +6,7 @@ import schedule from 'node-schedule';
 const filePath = './src/data/scheduleSettings.json';
 const usersFilePath = './src/data/users.json';
 const remindersFilePath = './src/data/reminders.json';
+const weekdaySettingsPath = './src/data/weekdaySettings.json';
 
 const weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
 const timeslots = [
@@ -33,6 +34,13 @@ const loadUsers = () => {
         return users;
     }
     return [];
+};
+
+const loadWeekdaySettings = () => {
+    if (fs.existsSync(weekdaySettingsPath)) {
+        return JSON.parse(fs.readFileSync(weekdaySettingsPath, 'utf-8'));
+    }
+    return {};
 };
 
 const saveSettings = (settings) => {
@@ -307,6 +315,7 @@ const getDailySchedule = (day, includeDayName = false) => {
 export const scheduleNotifications = () => {
     const users = loadUsers();
     const settings = loadSettings();
+    const weekdaySettings = loadWeekdaySettings();
 
     // Отменить все существующие задачи перед созданием новых
     cancelAllJobs();
@@ -317,7 +326,7 @@ export const scheduleNotifications = () => {
         todayIndex = todayIndex === 0 ? 6 : todayIndex - 1; // Преобразуем 0 (воскресенье) в 6, сдвигаем остальные дни
         const today = weekdays[todayIndex]; // Получаем название текущего дня недели
 
-        if (settings[today]) {
+        if (settings[today] && weekdaySettings[today]) {
             const dailySchedule = getDailySchedule(today, true);
 
             users.forEach(user => {
@@ -330,7 +339,7 @@ export const scheduleNotifications = () => {
 
     // Запланировать напоминания за 5 минут до каждой пары
     weekdays.forEach((day, dayIndex) => {
-        if (settings[day]) {
+        if (settings[day] && weekdaySettings[day]) {
             timeslots.forEach(slot => {
                 const slotValue = settings[day][slot.label];
                 if (slotValue) {

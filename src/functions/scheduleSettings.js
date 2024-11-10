@@ -1,3 +1,4 @@
+import { bot } from './botInstance.js';
 import { Markup } from 'telegraf';
 import fs from 'fs';
 import schedule from 'node-schedule';
@@ -83,7 +84,7 @@ export const importSchedule = (scheduleJson, ctx) => {
     if (Object.keys(schedule).length === 0) {
         saveSettings({});
         cancelAllJobs();
-        scheduleNotifications(ctx.bot);
+        scheduleNotifications();
         return;
     }
 
@@ -93,7 +94,7 @@ export const importSchedule = (scheduleJson, ctx) => {
 
     saveSettings(schedule);
     cancelAllJobs();
-    scheduleNotifications(ctx.bot);
+    scheduleNotifications();
 };
 
 export const deleteSchedule = () => {
@@ -247,7 +248,7 @@ export const handleScheduleMessage = (ctx) => {
     delete ctx.session.selectedDay;
     delete ctx.session.selectedSlot;
 
-    scheduleNotifications(ctx.bot);
+    scheduleNotifications();
 };
 
 export const getFullSchedule = () => {
@@ -303,9 +304,12 @@ const getDailySchedule = (day, includeDayName = false) => {
     return dailySchedule.trim();
 };
 
-export const scheduleNotifications = (bot) => {
+export const scheduleNotifications = () => {
     const users = loadUsers();
     const settings = loadSettings();
+
+    // Отменить все существующие задачи перед созданием новых
+    cancelAllJobs();
 
     // Запланировать ежедневное расписание на 07:00 по Киеву
     schedule.scheduleJob({ hour: 7, minute: 0, tz: timeZone }, () => {
@@ -348,10 +352,9 @@ export const scheduleNotifications = (bot) => {
                         dayOfWeek: dayIndex === 6 ? 0 : dayIndex + 1, // Преобразуем наш индекс обратно для расписания (воскресенье - 0)
                         tz: timeZone
                     }, () => {
-
                         users.forEach(user => {
                             if (user) {
-                                bot.telegram.sendMessage(user, `Напоминание: «<b>${slotValue}</b>» — <b>${slot.label}</b>, начинается через 5 минут.`, {parse_mode: 'HTML'});
+                                bot.telegram.sendMessage(user, `Напоминание: «<b>${slotValue}</b>» — <b>${slot.label}</b>, начинается через 5 минут.`, { parse_mode: 'HTML' });
                             }
                         });
                     });
@@ -389,7 +392,7 @@ export const deleteReminder = (reminderId, ctx) => {
     return true; // Возвращаем true, если удаление прошло успешно
 };
 
-export const scheduleReminders = (bot) => {
+export const scheduleReminders = () => {
     const reminders = loadReminders();
     reminders.forEach(reminder => {
         const [hour, minute] = reminder.time.split(':').map(Number);

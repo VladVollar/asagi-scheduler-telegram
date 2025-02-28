@@ -31,6 +31,7 @@ import {setupListUsersCommand} from "./src/commands/listUsers.js";
 import {setupToggleRegistrationCommand} from "./src/commands/toggleRegistration.js";
 import {saveConfig} from "./src/utils/saveConfig.js";
 import {checkForScheduleChanges} from "./src/functions/checkScheduleChanges.js";
+import {setupMassMentionCommand} from "./src/commands/massMention.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,6 +75,7 @@ setupScheduleTodayCommand(bot);
 setupScheduleTomorrowCommand(bot);
 setupListUsersCommand(bot);
 setupToggleRegistrationCommand(bot, config, configPath, saveConfig);
+setupMassMentionCommand(bot, config);
 
 setupCalendarActions(bot);
 setupScheduleHears(bot);

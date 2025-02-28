@@ -45,11 +45,6 @@ const setupMessageEvents = (bot) => {
             ctx.deleteMessage(ctx.message.message_id);
         });
 
-    bot.on('message', (ctx) => {
-        if (ctx.message.is_automatic_forward) {
-            ctx.unpinChatMessage(ctx.message.message_id).catch(() => {});
-        }
-    });
 };
 
 export {setupMessageEvents};

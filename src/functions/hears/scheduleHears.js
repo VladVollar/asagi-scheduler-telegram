@@ -9,7 +9,7 @@ const setupScheduleHears = (bot) => {
         const todaySchedule = getScheduleForDay(today);
 
         if (todaySchedule) {
-            ctx.reply(`<b>Расписание на сегодня (${today})</b>:\n\n${todaySchedule}`, { parse_mode: 'HTML' });
+            ctx.reply(`<b>Расписание на сегодня (${today})</b>:\n\n${todaySchedule}`, { parse_mode: 'HTML', disable_web_page_preview: true });
         } else {
             ctx.reply('На сегодня нет запланированных пар.');
         }
@@ -23,7 +23,7 @@ const setupScheduleHears = (bot) => {
         const tomorrowSchedule = getScheduleForDay(tomorrow);
 
         if (tomorrowSchedule) {
-            ctx.reply(`<b>Расписание на завтра (${tomorrow})</b>:\n\n${tomorrowSchedule}`, { parse_mode: 'HTML' });
+            ctx.reply(`<b>Расписание на завтра (${tomorrow})</b>:\n\n${tomorrowSchedule}`, { parse_mode: 'HTML', disable_web_page_preview: true });
         } else {
             ctx.reply('На завтра нет запланированных пар.');
         }
@@ -31,7 +31,7 @@ const setupScheduleHears = (bot) => {
 
     bot.hears('Расписание на неделю', groupIgnoreMiddleware, registrationMiddleware, (ctx) => {
         const fullSchedule = getFullSchedule();
-        ctx.reply(fullSchedule, { parse_mode: 'HTML' });
+        ctx.reply(fullSchedule, { parse_mode: 'HTML', disable_web_page_preview: true });
     });
 };
 

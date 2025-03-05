@@ -238,17 +238,17 @@ export const handleScheduleMessage = (ctx) => {
     if (messageText === '-') {
         if (settings[day] && settings[day][slot]) {
             delete settings[day][slot];
-            ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> удалена.`, { parse_mode: 'HTML' });
+            ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> удалена.`, { parse_mode: 'HTML', disable_web_page_preview: true });
             cancelJob(`${day}_${slot}`);
         } else {
-            ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> не найдена.`, { parse_mode: 'HTML' });
+            ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> не найдена.`, { parse_mode: 'HTML', disable_web_page_preview: true });
         }
     } else {
         if (!settings[day]) {
             settings[day] = {};
         }
         settings[day][slot] = messageText;
-        ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> успешно сохранена.`, { parse_mode: 'HTML' });
+        ctx.reply(`Пара на <b>${day}</b>, <b>${slot}</b> успешно сохранена.`, { parse_mode: 'HTML', disable_web_page_preview: true });
     }
 
     saveSettings(settings);
@@ -331,7 +331,7 @@ export const scheduleNotifications = () => {
 
             users.forEach(user => {
                 if (user) {
-                    bot.telegram.sendMessage(user, dailySchedule, { disable_notification: true, parse_mode: 'HTML' });
+                    bot.telegram.sendMessage(user, dailySchedule, { disable_notification: true, parse_mode: 'HTML', disable_web_page_preview: true });
                 }
             });
         }
@@ -363,7 +363,7 @@ export const scheduleNotifications = () => {
                     }, () => {
                         users.forEach(user => {
                             if (user) {
-                                bot.telegram.sendMessage(user, `Напоминание: «<b>${slotValue}</b>» — <b>${slot.label}</b>, начинается через 5 минут.`, { parse_mode: 'HTML' });
+                                bot.telegram.sendMessage(user, `Напоминание: «<b>${slotValue}</b>» — <b>${slot.label}</b>, начинается через 5 минут.`, { parse_mode: 'HTML', disable_web_page_preview: true });
                             }
                         });
                     });
@@ -540,7 +540,7 @@ export const handleCalendarSelection = (ctx) => {
     const dayOfWeek = weekdays[selectedDate.getUTCDay() === 0 ? 6 : selectedDate.getUTCDay() - 1];
     ctx.session.selectedDate = selectedDate.toISOString().split('T')[0];
     ctx.answerCbQuery(`Вы выбрали день: ${ctx.session.selectedDate} (${dayOfWeek})`, { show_alert: true });
-    ctx.reply('Введите время в формате <b>ЧЧ:ММ</b> и сообщение для напоминания.', { parse_mode: 'HTML' });
+    ctx.reply('Введите время в формате <b>ЧЧ:ММ</b> и сообщение для напоминания.', { parse_mode: 'HTML', disable_web_page_preview: true });
 };
 
 export const handleReminderMessage = (ctx) => {
@@ -576,6 +576,6 @@ export const handleReminderMessage = (ctx) => {
         deleteReminder(reminderId, ctx);
     });
 
-    ctx.reply(`Напоминание установлено на <b>${ctx.session.selectedDate}</b> в <b>${time}</b>: ${message}`, { parse_mode: 'HTML' });
+    ctx.reply(`Напоминание установлено на <b>${ctx.session.selectedDate}</b> в <b>${time}</b>: ${message}`, { parse_mode: 'HTML', disable_web_page_preview: true });
     delete ctx.session.selectedDate;
 };

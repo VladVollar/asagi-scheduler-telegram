@@ -9,7 +9,7 @@ const setupScheduleTodayCommand = (bot) => {
         const todaySchedule = getScheduleForDay(today);
 
         if (todaySchedule) {
-            ctx.reply(`<b>Расписание на сегодня (${today})</b>:\n\n${todaySchedule}`, { parse_mode: 'HTML' });
+            ctx.reply(`<b>Расписание на сегодня (${today})</b>:\n\n${todaySchedule}`, { parse_mode: 'HTML', disable_web_page_preview: true });
         } else {
             ctx.reply('На сегодня нет запланированных пар.');
         }

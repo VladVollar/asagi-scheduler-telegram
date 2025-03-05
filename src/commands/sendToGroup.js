@@ -18,7 +18,8 @@ const setupSendToGroupCommand = (bot, config) => {
             const studyGroupId = config.studyGroupId;
             await bot.telegram.sendMessage(studyGroupId, message, {
                 disable_notification: silent,
-                parse_mode: 'HTML'
+                parse_mode: 'HTML',
+                disable_web_page_preview: true
             });
             ctx.reply(`Сообщение отправлено в учебную группу${silent ? ' без звука' : ''}.`);
         } else {

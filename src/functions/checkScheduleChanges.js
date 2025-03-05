@@ -67,7 +67,7 @@ export function checkForScheduleChanges() {
             oldSchedule = newSchedule;
 
             if (changes.length > 0) {
-                sendMessageToAllUsers(`Расписание было обновлено:\n${changes.join('\n')}`, { parse_mode: 'HTML' });
+                sendMessageToAllUsers(`Расписание было обновлено:\n${changes.join('\n')}`, { parse_mode: 'HTML', disable_web_page_preview: true });
             }
         }
     });
